@@ -438,18 +438,6 @@
     max-height:34vh;overflow:auto;word-break:break-word;
   }
   #loi.show{display:block;}
-  /* ============ nhắc nhẹ (gạt chuông, mẹo nhỏ…) ============ */
-  #toast{
-    position:fixed;z-index:68;left:50%;transform:translate(-50%,16px);
-    bottom:calc(var(--sab) + 84px);
-    max-width:min(340px,86vw);padding:11px 16px;border-radius:999px;
-    background:rgba(60,12,36,.88);border:1px solid rgba(255,190,220,.35);
-    -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
-    font-size:.8rem;line-height:1.45;color:#ffe2ef;text-align:center;
-    opacity:0;pointer-events:none;transition:opacity .5s ease, transform .5s ease;
-  }
-  #toast.show{opacity:1;transform:translate(-50%,0);}
-
   #loiX{
     position:absolute;right:6px;top:6px;width:28px;height:28px;border-radius:50%;
     border:none;background:rgba(255,255,255,.12);color:#ffd9e8;font-size:14px;cursor:pointer;
@@ -526,7 +514,6 @@
 <div id="flash"></div>
 
 <div id="loi"><button id="loiX" type="button" aria-label="Đóng">✕</button><span id="loiText"></span></div>
-<div id="toast"></div>
 
 <div id="loader">
   <div class="ring"></div>
@@ -617,16 +604,6 @@ const KY_NIEM = (() => {
    thì hiện luôn ra đây để còn biết đường sửa.
    ======================================================= */
 let soLoi = 0;
-let toastTimer = null;
-function hienToast(chu, giay = 6){
-  const el = document.getElementById('toast');
-  if(!el) return;
-  el.textContent = chu;
-  el.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), giay * 1000);
-}
-
 function baoLoi(err){
   console.error(err);
   if(soLoi++ > 4) return;
@@ -1394,21 +1371,34 @@ function toggleMusic(force){
     hasAudioFile = true;
     stopSynth();
     if(fadeDuocAmLuong) fadeAudio(bgm, 0.85, 1400);
-    goiYChuong();
   }).catch(() => {
     hasAudioFile = false;
-    if(musicOn){ batSynth(); goiYChuong(); }
+    if(musicOn) batSynth();
   });
 }
 
-// Trên iPhone, gạt chuông sang chế độ im lặng là mọi âm thanh trong trình duyệt
-// đều tắt — không có cách nào phát hiện bằng mã. Nhắc nhẹ một lần cho đỡ hoang mang.
-let daGoiYChuong = false;
-function goiYChuong(){
-  if(daGoiYChuong || !MOBILE) return;
-  daGoiYChuong = true;
-  hienToast('Không nghe thấy nhạc? Thử gạt nút chuông bên hông máy 🔔');
+/* Mở khoá âm thanh ngay từ cú chạm ĐẦU TIÊN vào trang, chạm vào đâu cũng được.
+   Mẹo: phát ở chế độ tắt tiếng rồi dừng lại ngay — người nghe không thấy gì,
+   nhưng thẻ audio đã được iOS đánh dấu "người dùng cho phép", nên lát nữa bấm
+   mở quà là phát được chắc chắn hơn. */
+let daMoKhoa = false;
+function moKhoaAmThanh(){
+  if(daMoKhoa) return;
+  daMoKhoa = true;
+  try {
+    bgm.muted = true;
+    bgm.play().then(() => {
+      if(!musicOn){ bgm.pause(); bgm.currentTime = 0; }
+      bgm.muted = false;
+    }).catch(() => { bgm.muted = false; });
+  } catch(e){ bgm.muted = false; }
+  try {
+    if(!actx) initAudio();
+    if(actx && actx.state === 'suspended') actx.resume();
+  } catch(e){ /* không sao */ }
 }
+addEventListener('pointerdown', moKhoaAmThanh, { once:true, passive:true });
+addEventListener('touchstart',  moKhoaAmThanh, { once:true, passive:true });
 
 musicBtn.addEventListener('click', () => {
   // lỗi âm thanh không được phép làm hỏng phần còn lại của trang
@@ -1542,16 +1532,16 @@ function openGift(){
   opened = true;
   introEl.classList.add('hidden');
 
-  // Hoạt cảnh chạy TRƯỚC — không để bất cứ thứ gì chen vào làm hỏng việc mở quà.
-  buildTimeline();
-  startTimeline();
-
-  // Nhạc nổi lên cùng lúc hộp quà bật ra. Hàm này vẫn đang nằm trong cú chạm
-  // vào nút mở quà, nên trình duyệt cho phép phát. Bọc riêng để dù âm thanh
-  // có trục trặc thì quà vẫn mở bình thường.
+  // Phát nhạc ở DÒNG ĐẦU TIÊN của cú chạm. iOS càng dễ chấp nhận khi play()
+  // nằm sát đầu trình xử lý sự kiện. Trước đây đặt nhạc trước gây kẹt quà,
+  // nhưng thủ phạm là thiếu try/catch chứ không phải thứ tự — giờ đã bọc kín
+  // nên dù âm thanh hỏng kiểu gì hoạt cảnh bên dưới vẫn chạy.
   if(!nguoiDungTatNhac){
     try { toggleMusic(true); } catch(err){ baoLoi(err); }
   }
+
+  buildTimeline();
+  startTimeline();
 
   // Lưới an toàn: nếu sau 7 giây mà quà vẫn chưa mở (máy yếu, WebGL lỗi…)
   // thì bật hộp ra ngay và hiện lời nhắn, để không bao giờ bị kẹt.
