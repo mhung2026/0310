@@ -1953,6 +1953,29 @@ addEventListener('keydown', e => {
   if((e.code === 'Space' || e.code === 'Enter') && !opened){ e.preventDefault(); openGift(); }
 });
 
+/* --------- nung sẵn shader của chiếc máy ảnh ---------
+   Máy ảnh nằm ẩn cho tới giây 1.75 của hoạt cảnh. Ngay khung hình nó hiện ra,
+   three.js mới phải biên dịch một lúc cả chục chương trình shader (thân kim
+   loại, dải da, viền vàng, đèn phát sáng…) ngay trên luồng chính — việc này
+   không chia nhỏ được và chặn cứng vài trăm mili giây. Đó là lý do chỉ LẦN MỞ
+   ĐẦU TIÊN mới giật, còn bấm "mở lại" thì mượt: shader đã nằm sẵn trong bộ
+   nhớ đệm.
+
+   Nên dọn trước ngay lúc màn hình chờ còn che: cho máy ảnh hiện đúng một
+   khung hình rồi ẩn lại. Nó đang ở tỉ lệ 0.0001 và nằm lọt trong hộp quà kín,
+   nên mắt không thể thấy. needsUpdate để lượt render này biên dịch luôn cả
+   phiên bản shader dùng cho bóng đổ. */
+try {
+  camGroup.visible = true;
+  renderer.shadowMap.needsUpdate = true;
+  renderer.compile(scene, camera);
+  composer.render();
+} catch(err){
+  baoLoi(err);
+} finally {
+  camGroup.visible = false;
+}
+
 animate();
 setTimeout(() => document.getElementById('loader').classList.add('gone'), 900);
 </script>
