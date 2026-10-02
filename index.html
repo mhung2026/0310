@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#12061a" />
+<meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Quà cho cậu" />
@@ -22,13 +23,12 @@
     --cream:#fff4f8;
   }
   *{margin:0;padding:0;box-sizing:border-box;}
-  html,body{
+  html{height:100%;background:#12061a;}
+  body{
+    position:fixed;inset:0;width:100%;
     height:100%;height:100dvh;
     overflow:hidden;background:#12061a;
     overscroll-behavior:none;
-    position:fixed;inset:0;width:100%;
-  }
-  body{
     font-family:'Quicksand',sans-serif;
     color:var(--cream);
     -webkit-font-smoothing:antialiased;
@@ -314,6 +314,11 @@
     color:#ffd9e8;font-size:19px;cursor:pointer;transition:all .3s;
   }
   #music.on{color:#fff;box-shadow:0 0 22px rgba(255,150,195,.7);border-color:rgba(255,190,220,.8);}
+  #music.hint{animation:moiBam 2.4s ease-in-out infinite;}
+  @keyframes moiBam{
+    0%,100%{box-shadow:0 0 0 0 rgba(255,160,205,.55);}
+    50%{box-shadow:0 0 0 9px rgba(255,160,205,0);}
+  }
 
   /* ============ màn hình chờ ============ */
   #loader{
@@ -384,6 +389,23 @@
 
   @media (prefers-reduced-motion:reduce){
     #grain,.btn{animation:none;}
+  }
+
+  /* ============ hộp báo lỗi (để gỡ rối trên điện thoại) ============ */
+  #loi{
+    position:fixed;z-index:70;left:10px;right:10px;
+    bottom:calc(var(--sab) + 10px);
+    display:none;padding:12px 40px 12px 14px;border-radius:12px;
+    background:rgba(60,8,30,.92);border:1px solid rgba(255,150,190,.45);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+    font-size:.72rem;line-height:1.5;color:#ffd9e8;
+    font-family:ui-monospace,Menlo,Consolas,monospace;
+    max-height:34vh;overflow:auto;word-break:break-word;
+  }
+  #loi.show{display:block;}
+  #loiX{
+    position:absolute;right:6px;top:6px;width:28px;height:28px;border-radius:50%;
+    border:none;background:rgba(255,255,255,.12);color:#ffd9e8;font-size:14px;cursor:pointer;
   }
 </style>
 </head>
@@ -456,6 +478,8 @@
 
 <div id="flash"></div>
 
+<div id="loi"><button id="loiX" type="button" aria-label="Đóng">✕</button><span id="loiText"></span></div>
+
 <div id="loader">
   <div class="ring"></div>
   <p>Đang thắt nơ cho món quà…</p>
@@ -495,7 +519,12 @@ const CONFIG = {
           { src:'anh/1.jpg', chu:'Lần đầu mình đi chơi xa' },
           { src:'anh/2.jpg', chu:'Cái Tết đầu tiên có cậu' },
         ],                                                              */
-  anh:        [],
+  anh: [
+    { src:'anh/1.jpg', chu:'' },
+    { src:'anh/2.jpg', chu:'' },
+    { src:'anh/3.jpg', chu:'' },
+    { src:'anh/4.jpg', chu:'' },
+  ],
   thuMucAnh:  'anh',
   soAnhDoTim: 40,             // dò tối đa bao nhiêu file khi tự tìm
   giaySlide:  4.2,            // mỗi tấm hiện bao nhiêu giây
@@ -535,6 +564,31 @@ const KY_NIEM = (() => {
 })();
 
 /* =======================================================
+   0a. Báo lỗi hiện ngay trên màn hình
+   Điện thoại không mở được bảng điều khiển, nên nếu có trục trặc
+   thì hiện luôn ra đây để còn biết đường sửa.
+   ======================================================= */
+let soLoi = 0;
+function baoLoi(err){
+  console.error(err);
+  if(soLoi++ > 4) return;
+  const hop = document.getElementById('loi');
+  const chu = document.getElementById('loiText');
+  if(!hop || !chu) return;
+  const msg = (err && (err.stack || err.message)) || String(err);
+  chu.textContent = (chu.textContent ? chu.textContent + '\n\n' : '') + msg;
+  hop.classList.add('show');
+}
+document.getElementById('loiX').addEventListener('click',
+  () => document.getElementById('loi').classList.remove('show'));
+addEventListener('error', e => {
+  // bỏ qua sự kiện lỗi của ảnh/tài nguyên — chỉ quan tâm lỗi mã nguồn
+  if(!e.error && !e.message) return;
+  baoLoi(e.error || e.message);
+});
+addEventListener('unhandledrejection', e => baoLoi(e.reason));
+
+/* =======================================================
    0. Tiện ích: tween nhỏ gọn + timeline
    ======================================================= */
 const TAU = Math.PI * 2;
@@ -566,7 +620,13 @@ function startTimeline(){ tlTime = 0; tlOn = true; tlEvents.forEach(e => e.done 
 function updateTimeline(dt){
   if(!tlOn) return;
   tlTime += dt;
-  for(const e of tlEvents){ if(!e.done && tlTime >= e.t){ e.done = true; e.fn(); } }
+  for(const e of tlEvents){
+    if(!e.done && tlTime >= e.t){
+      e.done = true;
+      // một bước hỏng không được phép làm đứng cả chuỗi mở quà
+      try { e.fn(); } catch(err){ baoLoi(err); }
+    }
+  }
 }
 
 /* =======================================================
@@ -1254,7 +1314,12 @@ function toggleMusic(force){
     stopSynth();
   }
 }
-musicBtn.addEventListener('click', () => toggleMusic());
+musicBtn.addEventListener('click', () => {
+  musicBtn.classList.remove('hint');
+  // lỗi âm thanh không được phép làm hỏng phần còn lại của trang
+  try { toggleMusic(); } catch(err){ baoLoi(err); }
+});
+musicBtn.classList.add('hint');   // nhấp nháy mời bấm cho tới khi được dùng lần đầu
 
 function shutterSound(){
   if(!actx) initAudio();
@@ -1347,13 +1412,31 @@ function buildTimeline(){
   at(3.5, () => {
     popConfetti(120);
     burst(new THREE.Vector3(0, 1.2, 0), 180, 2.6);
-    revealEl.classList.remove('hidden');
-    lineEls.forEach((el, i) => setTimeout(() => el.classList.add('show'), i*700));
-    controls.enabled = true;
-    controls.autoRotate = true;
-    idlePhase = 1;
-    tlOn = false;
+    showReveal();
   });
+}
+
+// Hiện lời nhắn. Gọi được nhiều lần mà không sao.
+function showReveal(){
+  if(idlePhase === 1) return;
+  revealEl.classList.remove('hidden');
+  lineEls.forEach((el, i) => setTimeout(() => el.classList.add('show'), i*700));
+  controls.enabled = true;
+  controls.autoRotate = true;
+  idlePhase = 1;
+  tlOn = false;
+}
+
+// Bật hộp quà ngay lập tức, không cần hoạt cảnh (dùng khi hoạt cảnh gặp sự cố)
+function snapOpen(){
+  lid.visible = false;
+  walls.forEach(w => w.rotation.x = 1.78);
+  camGroup.visible = true;
+  camGroup.scale.setScalar(1);
+  camGroup.position.y = 1.18;
+  twinkleMat.uniforms.uOpacity.value = 0.9;
+  lensLight.intensity = 2.6;
+  camRadius = DIST_OPEN; camHeight = CAMH_OPEN;
 }
 
 let camRadius = DIST_CLOSED, camHeight = CAMH_CLOSED;
@@ -1362,9 +1445,16 @@ function openGift(){
   if(opened) return;
   opened = true;
   introEl.classList.add('hidden');
-  toggleMusic(true);
+
+  // Hoạt cảnh chạy TRƯỚC — không để bất cứ thứ gì chen vào làm hỏng việc mở quà.
   buildTimeline();
   startTimeline();
+
+  // Lưới an toàn: nếu sau 7 giây mà quà vẫn chưa mở (máy yếu, WebGL lỗi…)
+  // thì bật hộp ra ngay và hiện lời nhắn, để không bao giờ bị kẹt.
+  setTimeout(() => {
+    if(idlePhase !== 1){ snapOpen(); showReveal(); }
+  }, 7000);
 }
 
 function resetGift(){
@@ -1589,6 +1679,10 @@ function watchPerformance(dt){
 
 function animate(){
   requestAnimationFrame(animate);
+  try { khungHinh(); } catch(err){ baoLoi(err); }
+}
+
+function khungHinh(){
   const dt = Math.min(clock.getDelta(), 0.05);
   const t  = clock.elapsedTime;
 
@@ -1662,15 +1756,11 @@ addEventListener('resize', queueResize);
 addEventListener('orientationchange', () => setTimeout(resizeAll, 320));
 visualViewport && visualViewport.addEventListener('resize', queueResize);
 
-// chặn pinch-zoom và double-tap-zoom của Safari
+// Chặn pinch-zoom của Safari. Việc chặn double-tap-zoom đã có
+// "touch-action: manipulation" trong CSS lo — không dùng JS chặn touchend,
+// vì nó nuốt luôn cả cú chạm vào nút khi người dùng bấm nhanh hai lần.
 ['gesturestart','gesturechange','gestureend'].forEach(ev =>
   document.addEventListener(ev, e => e.preventDefault(), { passive:false }));
-let lastTap = 0;
-document.addEventListener('touchend', e => {
-  const now = Date.now();
-  if(now - lastTap < 320) e.preventDefault();
-  lastTap = now;
-}, { passive:false });
 
 // bấm phím cách / enter cũng mở được quà
 addEventListener('keydown', e => {
