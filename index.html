@@ -99,9 +99,12 @@
   }
 
   /* ============ pháo giấy ============ */
+  /* Không đặt will-change ở đây: lúc bật nắp có cả trăm mảnh cùng sống, mỗi
+     mảnh sẽ thành một lớp GPU riêng và máy nghẹn ngay nhịp đó. Hoạt cảnh chạy
+     bằng Web Animations trên transform/opacity nên trình duyệt đã tự đẩy lên
+     compositor trong lúc chạy rồi. */
   .confetti{
     position:absolute;top:42%;left:50%;width:9px;height:14px;border-radius:2px;
-    will-change:transform,opacity;
   }
 
   /* ============ lớp giao diện ============ */
@@ -418,6 +421,10 @@
 
     /* bớt tim/cánh hoa cho đỡ nặng máy */
     .heart{font-size:18px;}
+
+    /* backdrop-filter nằm đè lên canvas đang động buộc máy đọc ngược lại nền
+       rồi làm mờ ở mọi khung hình. Trên điện thoại đổi sang nền đục cho rẻ. */
+    #music{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(74,20,48,.62);}
   }
 
   /* ===== Điện thoại nằm ngang (932 × 430) ===== */
@@ -430,7 +437,8 @@
     #lines{gap:4px;}
     .line.big{font-size:clamp(1.4rem,5.4vh,2rem);}
     .line.small{font-size:.8rem;line-height:1.45;max-width:46ch;}
-    .line.small[data-i="2"]{display:none;}
+    /* Màn ngang rất thấp: chỉ đủ chỗ cho câu chốt, giấu hai đoạn giữa đi. */
+    .line.small[data-i="2"],.line.small[data-i="3"]{display:none;}
     .line.tiny{font-size:.62rem;}
     .row{margin-top:12px;gap:10px;}
     #polaroid{width:min(188px,26vw);padding:9px 9px 42px;}
@@ -497,8 +505,9 @@
     <div id="lines">
       <p class="line tiny" data-i="0">gửi <span class="js-ten">Ani</span> — kỷ niệm <span class="js-nam">3</span> năm anh và em bên nhau · <span class="js-ngay">03/10</span></p>
       <h2 class="line big script" data-i="1">Một chiếc máy ảnh nhỏ 📸</h2>
-      <p class="line small" data-i="2">Ba năm rồi đó <span class="js-ten">Ani</span>. Anh sợ thời gian sẽ cuốn đi mất<br/>những ngày có em, nên anh tặng em thứ giữ lại được tất cả.</p>
-      <p class="line small" data-i="3">Từ nay mỗi nụ cười của em đều có một chỗ để ở lại.<br/>Và cho anh xin thêm thật nhiều năm nữa trong khung hình nhé? 💗</p>
+      <p class="line small" data-i="2">Ba năm rồi đó <span class="js-ten">Ani</span>. Thứ anh sợ nhất không phải xa nhau,<br/>mà là một ngày nào đó anh quên mất hôm nay em cười thế nào.<br/>Nên anh đi tìm một thứ giữ lại được tất cả.</p>
+      <p class="line small" data-i="3">Từ nay mình chụp nhé. Chụp lúc em chưa kịp xinh, lúc em ngủ gật,<br/>lúc em giận anh rồi lại thôi — mấy khoảnh khắc đó anh thương nhất.</p>
+      <p class="line small" data-i="4">Em giữ máy, còn anh xin giữ chỗ bên cạnh em.<br/>Thêm thật nhiều năm nữa chung một khung hình nữa nhé? 💗</p>
     </div>
     <div class="row">
       <button class="btn" id="snapBtn">Mở album kỷ niệm 📷</button>
@@ -692,7 +701,7 @@ function updateTimeline(dt){
    ======================================================= */
 // Nhận diện điện thoại để hạ tải đồ hoạ (iPhone có DPR 3, rất tốn pixel)
 const MOBILE = matchMedia('(pointer: coarse)').matches || Math.min(innerWidth, innerHeight) < 560;
-let dprCap = MOBILE ? 2 : 2;
+let dprCap = MOBILE ? 1.5 : 2;
 
 const stage = document.getElementById('stage');
 const renderer = new THREE.WebGLRenderer({ antialias:!MOBILE, alpha:true, powerPreference:'high-performance' });
@@ -701,7 +710,12 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.08;
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+// PCFSoft là bộ lọc bóng đắt nhất — để dành cho máy tính.
+renderer.shadowMap.type = MOBILE ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+// Cảnh xoay rất chậm nên không cần vẽ lại shadow map 60 lần/giây. Tự quản
+// nhịp cập nhật trong vòng lặp render (xem SHADOW_EVERY).
+renderer.shadowMap.autoUpdate = false;
+renderer.shadowMap.needsUpdate = true;
 stage.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -1200,7 +1214,12 @@ scene.add(shock);
    ======================================================= */
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.72, 0.62, 0.72);
+// UnrealBloomPass kéo theo 5 cặp render target và cả chục lượt làm mờ. Trên
+// điện thoại cho nó chạy ở nửa độ phân giải — quầng sáng vốn đã mờ nhoè nên
+// mắt không nhận ra, mà tiết kiệm được 3/4 số điểm ảnh phải xử lý.
+const BLOOM_SCALE = MOBILE ? 0.5 : 1;
+const bloom = new UnrealBloomPass(
+  new THREE.Vector2(innerWidth*BLOOM_SCALE, innerHeight*BLOOM_SCALE), 0.72, 0.62, 0.72);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
@@ -1237,33 +1256,67 @@ function spawnPetal(){
   petalsEl.appendChild(el);
   setTimeout(() => el.remove(), dur*1000 + 200);
 }
-setInterval(spawnHeart, MOBILE ? 1500 : 950);
-setInterval(spawnPetal, MOBILE ? 1100 : 700);
+let timTimer = setInterval(spawnHeart, MOBILE ? 1500 : 950);
+let hoaTimer = setInterval(spawnPetal, MOBILE ? 1100 : 700);
+let moTimer  = null;
 for(let i=0;i<(MOBILE?4:7);i++) setTimeout(spawnPetal, i*420);
 
+// Tạm ngắt mưa tim/cánh hoa trong đoạn hoạt cảnh nặng. Mỗi bông đều kéo theo
+// drop-shadow/box-shadow riêng, cộng dồn vào đúng lúc nắp bật thì rất khựng.
+function nghiThoiNen(ms){
+  clearInterval(timTimer); clearInterval(hoaTimer); clearTimeout(moTimer);
+  moTimer = setTimeout(() => {
+    timTimer = setInterval(spawnHeart, MOBILE ? 1500 : 950);
+    hoaTimer = setInterval(spawnPetal, MOBILE ? 1100 : 700);
+  }, ms);
+}
+
 const CONF_COLORS = ['#ff7bac','#ffd98a','#fff0f6','#c0a8ff','#9fe8ff','#ff4d84','#ffb3d1'];
+const CONF_BATCH = MOBILE ? 14 : 28;   // số mảnh dựng trong một khung hình
+
+function dungManhGiay(){
+  const el = document.createElement('div');
+  el.className = 'confetti';
+  const col = CONF_COLORS[(Math.random()*CONF_COLORS.length)|0];
+  el.style.background = col;
+  // quầng sáng làm vùng phải tô của mỗi mảnh phình ra gấp mấy lần diện tích
+  // thật — trên điện thoại bỏ hẳn, đổi lại một nhịp mở quà không giật
+  if(!MOBILE) el.style.boxShadow = `0 0 10px ${col}`;
+  if(Math.random() < 0.35){ el.style.borderRadius = '50%'; el.style.width = el.style.height = '8px'; }
+  return el;
+}
+
+function chayManhGiay(el){
+  const ang = Math.random()*TAU;
+  const dist = 120 + Math.random()*Math.max(innerWidth, innerHeight)*0.62;
+  const dx = Math.cos(ang)*dist;
+  const dy = Math.sin(ang)*dist*0.8;
+  const dur = 1700 + Math.random()*1700;
+  el.animate([
+    { transform:'translate(-50%,-50%) translate(0,0) rotate(0deg)', opacity:1 },
+    { transform:`translate(-50%,-50%) translate(${dx*0.68}px,${dy*0.68 - 60}px) rotate(${Math.random()*540}deg)`, opacity:1, offset:0.45 },
+    { transform:`translate(-50%,-50%) translate(${dx}px,${dy + 440}px) rotate(${Math.random()*1200}deg)`, opacity:0 }
+  ], { duration:dur, easing:'cubic-bezier(.17,.67,.5,1)' });
+  setTimeout(() => el.remove(), dur);
+}
+
+// Dựng hết một lượt 170 mảnh trong cùng một khung hình là nguyên nhân chính
+// gây khựng lúc bật nắp. Rải ra nhiều khung hình, mỗi lượt gom vào một
+// DocumentFragment để chỉ tốn đúng một lần tính bố cục.
 function popConfetti(n = 150){
-  n = Math.round(n * (MOBILE ? 0.55 : 1));
-  for(let i=0;i<n;i++){
-    const el = document.createElement('div');
-    el.className = 'confetti';
-    const col = CONF_COLORS[(Math.random()*CONF_COLORS.length)|0];
-    el.style.background = col;
-    el.style.boxShadow = `0 0 10px ${col}`;
-    if(Math.random() < 0.35){ el.style.borderRadius = '50%'; el.style.width = el.style.height = '8px'; }
-    confettiEl.appendChild(el);
-    const ang = Math.random()*TAU;
-    const dist = 120 + Math.random()*Math.max(innerWidth, innerHeight)*0.62;
-    const dx = Math.cos(ang)*dist;
-    const dy = Math.sin(ang)*dist*0.8;
-    const dur = 1700 + Math.random()*1700;
-    el.animate([
-      { transform:'translate(-50%,-50%) translate(0,0) rotate(0deg)', opacity:1 },
-      { transform:`translate(-50%,-50%) translate(${dx*0.68}px,${dy*0.68 - 60}px) rotate(${Math.random()*540}deg)`, opacity:1, offset:0.45 },
-      { transform:`translate(-50%,-50%) translate(${dx}px,${dy + 440}px) rotate(${Math.random()*1200}deg)`, opacity:0 }
-    ], { duration:dur, easing:'cubic-bezier(.17,.67,.5,1)' });
-    setTimeout(() => el.remove(), dur);
-  }
+  n = Math.round(n * (MOBILE ? 0.35 : 1));
+  let conLai = n;
+  const dot = () => {
+    const lo = Math.min(CONF_BATCH, conLai);
+    const frag = document.createDocumentFragment();
+    const manh = [];
+    for(let i=0;i<lo;i++){ const el = dungManhGiay(); manh.push(el); frag.appendChild(el); }
+    confettiEl.appendChild(frag);
+    manh.forEach(chayManhGiay);
+    conLai -= lo;
+    if(conLai > 0) requestAnimationFrame(dot);
+  };
+  dot();
 }
 
 /* =======================================================
@@ -1563,6 +1616,10 @@ function openGift(){
     try { toggleMusic(true); } catch(err){ baoLoi(err); }
   }
 
+  nghiThoiNen(4200);   // nín mưa tim/cánh hoa suốt đoạn hoạt cảnh nặng
+  doHieuNang = true;   // từ đây mới có ý nghĩa để đo khung hình
+  fpsAcc = 0; fpsFrames = 0;
+
   buildTimeline();
   startTimeline();
 
@@ -1773,24 +1830,30 @@ const clock = new THREE.Clock();
 let camAngle = 0;
 const aimTarget = new THREE.Vector3();
 
-// Tự hạ độ phân giải nếu máy chạy không mượt (giữ cho iPhone luôn ~60fps)
-let fpsAcc = 0, fpsFrames = 0, qualityStep = 0;
+const SHADOW_EVERY = MOBILE ? 3 : 1;   // mobile: bóng đổ ~20 nhịp/giây là thừa
+let shadowTick = 0;
+
+// Tự hạ độ phân giải nếu máy chạy không mượt (giữ cho iPhone luôn ~60fps).
+//
+// Trước đây hàm này đo 2.5 giây ĐẦU TIÊN, tức là lúc màn hình chờ còn nhẹ hều.
+// Máy nào chạy trên 55fps ở đoạn đó là bị chốt qualityStep = 2 và nghỉ hẳn —
+// nên đúng lúc mở quà (bloom 1.9, mấy trăm hạt, 4 vách xoay) thì cơ chế cứu
+// đã bị khoá từ lâu. Giờ chỉ bắt đầu đo khi hoạt cảnh nặng chạy, cửa sổ đo
+// ngắn lại cho kịp phản ứng, và không tự khoá nữa.
+let fpsAcc = 0, fpsFrames = 0, qualityStep = 0, doHieuNang = false;
 function watchPerformance(dt){
-  if(qualityStep >= 2) return;
+  if(!doHieuNang || qualityStep >= 2) return;
   fpsAcc += dt; fpsFrames++;
-  if(fpsAcc < 2.5) return;
+  if(fpsAcc < 1.2) return;
   const fps = fpsFrames / fpsAcc;
   fpsAcc = 0; fpsFrames = 0;
-  if(fps < 45){
-    qualityStep++;
-    dprCap = qualityStep === 1 ? 1.5 : 1.15;
-    renderer.setPixelRatio(Math.min(devicePixelRatio, dprCap));
-    composer.setPixelRatio && composer.setPixelRatio(Math.min(devicePixelRatio, dprCap));
-    resizeAll();
-    if(qualityStep === 2) bloom.radius = 0.45;
-  } else if(fps > 55){
-    qualityStep = 2; // đủ mượt, thôi không theo dõi nữa
-  }
+  if(fps >= 45) return;
+  qualityStep++;
+  dprCap = qualityStep === 1 ? (MOBILE ? 1.25 : 1.5) : (MOBILE ? 1 : 1.15);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, dprCap));
+  composer.setPixelRatio && composer.setPixelRatio(Math.min(devicePixelRatio, dprCap));
+  resizeAll();
+  if(qualityStep === 2) bloom.radius = 0.45;
 }
 
 function animate(){
@@ -1843,6 +1906,12 @@ function khungHinh(){
   rimGold.intensity  = 22 + Math.sin(t*0.8 + 1.5)*7;
   rimViolet.intensity= 18 + Math.sin(t*1.4 + 3)*6;
 
+  // Bóng đổ chỉ vẽ lại mỗi SHADOW_EVERY khung hình. Hộp quà xoay cực chậm nên
+  // bóng trễ một hai nhịp là không ai thấy, mà đỡ hẳn một lượt render cả cảnh.
+  // hậu tố ++ để khung hình đầu tiên rơi vào nhịp 0, tránh một hai nhịp đầu
+  // chạy khi shadow map chưa kịp được cấp phát
+  renderer.shadowMap.needsUpdate = (shadowTick++ % SHADOW_EVERY) === 0;
+
   controls.update();
   composer.render();
 }
@@ -1852,7 +1921,8 @@ function resizeAll(){
   computeLayout();
   renderer.setSize(w, h);
   composer.setSize(w, h);
-  bloom.setSize(w, h);
+  bloom.setSize(w*BLOOM_SCALE, h*BLOOM_SCALE);
+  renderer.shadowMap.needsUpdate = true;
   if(idlePhase === 1){
     // giữ nguyên khung hình sau khi xoay máy
     const dir = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
