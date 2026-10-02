@@ -207,7 +207,12 @@
 
   /* ============ lời nhắn sau khi mở quà ============ */
   #reveal{justify-content:flex-end;padding-bottom:calc(var(--sab) + 22px);pointer-events:none;}
-  #reveal .inner{pointer-events:auto;width:100%;max-width:560px;}
+  /* Chỉ nhận cú chạm khi màn này đang hiện. Thiếu ":not(.hidden)" thì con có
+     pointer-events:auto vẫn ăn cú chạm dù cha đã none — hai nút ẩn ở đáy màn
+     #reveal sẽ nằm đè lên chữ và nút của màn mở đầu, chạm "Mở quà ra xem"
+     hoá ra lại trúng nút "Gói lại", chạm dòng "… ngày" lại mở album. */
+  #reveal .inner{width:100%;max-width:560px;}
+  #reveal:not(.hidden) .inner{pointer-events:auto;}
   #lines{display:flex;flex-direction:column;gap:12px;align-items:center;}
   .line{
     opacity:0;transform:translateY(26px) scale(.96);filter:blur(8px);
