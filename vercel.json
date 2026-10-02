@@ -1,0 +1,4 @@
+{
+  "buildCommand": "node quet-anh.js",
+  "outputDirectory": "."
+}

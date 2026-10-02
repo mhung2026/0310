@@ -1,30 +1,55 @@
 BỎ ẢNH VÀO ĐÂY
 ==============
 
-Cách dễ nhất: copy ảnh vào thư mục này rồi đổi tên thành số thứ tự:
+Copy ảnh vào thư mục này rồi đổi tên thành số thứ tự:
 
     anh/1.jpg
     anh/2.jpg
     anh/3.jpg
     ...
 
-Trang web sẽ tự tìm thấy và chạy slide theo đúng thứ tự số, không cần
-sửa code gì cả. Hỗ trợ các đuôi: .jpg .jpeg .png .webp
-Đánh số liên tục nhé — nếu hụt 3 số liên tiếp thì trang sẽ ngừng dò.
+Hết. Không cần sửa code, không cần khai báo số lượng ở đâu cả. Trang đọc
+đúng những gì đang có thật trong thư mục này.
+Hỗ trợ các đuôi: .jpg .jpeg .png .webp .avif .gif
+
+Số không cần liên tục — nhảy cóc 1, 2, 7 vẫn chạy đủ. Thứ tự slide xếp
+theo số, nên 2.jpg đứng trước 10.jpg (không bị xếp kiểu chữ cái).
 
 ---
 
-Muốn ghi chú riêng cho từng tấm thì mở index.html, tìm khối CONFIG ở
-đầu phần <script type="module">, rồi điền vào mục "anh":
+Nó tự biết bằng cách nào?
+
+Trình duyệt không tự đọc được nội dung một thư mục, nên phải có ai đó đưa
+cho nó danh sách. File "danhsach.json" cạnh đây chính là danh sách ấy, và
+nó được sinh lại tự động ở cả hai nơi:
+
+  - Chạy máy nhà bằng "node serve.js": quét lại ngay mỗi lần tải trang.
+    Bỏ thêm ảnh vào là F5 thấy liền, khỏi khởi động lại server.
+  - Đẩy lên Vercel: lệnh "node quet-anh.js" chạy lúc deploy (vercel.json).
+    Bạn chỉ việc commit ảnh mới rồi push.
+
+Muốn sinh lại bằng tay thì gõ:  node quet-anh.js
+Đừng sửa danhsach.json trực tiếp, sẽ bị ghi đè.
+
+---
+
+Muốn ghi chú riêng cho từng tấm thì mở index.html, tìm khối CONFIG ở đầu
+phần <script type="module">, rồi điền vào mục "chuThich" theo TÊN FILE:
+
+    chuThich: {
+      '1.jpg': 'Lần đầu mình đi chơi xa',
+      '3.jpg': 'Hôm cậu cười nhiều nhất',
+    },
+
+Tấm nào không khai thì dùng câu mặc định "3 năm rồi… và còn dài nữa nhé".
+
+Nếu muốn tự tay chốt cả danh sách lẫn thứ tự, bỏ qua thư mục luôn, thì
+điền vào mục "anh" — có gì trong đó là nó được ưu tiên:
 
     anh: [
-      { src:'anh/1.jpg', chu:'Lần đầu mình đi chơi xa' },
-      { src:'anh/2.jpg', chu:'Cái Tết đầu tiên có cậu' },
-      { src:'anh/3.jpg', chu:'Hôm cậu cười nhiều nhất' },
+      { src:'anh/dalat.jpg', chu:'Đà Lạt' },
+      { src:'anh/tet.png',   chu:'Cái Tết đầu tiên có cậu' },
     ],
-
-Dòng chữ "chu" sẽ hiện bên dưới tấm ảnh bằng nét chữ viết tay.
-Nếu để trống thì dùng câu mặc định "3 năm rồi… và còn dài nữa nhé".
 
 ---
 

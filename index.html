@@ -579,21 +579,24 @@ const CONFIG = {
   ngayBatDau: '2023-10-03',   // ngày mình bắt đầu — kỷ niệm rơi vào 03/10 hằng năm
 
   /* ẢNH CHO ALBUM ------------------------------------------------------
-     Cách 1 (dễ nhất): bỏ ảnh vào thư mục "anh/" và đặt tên 1.jpg, 2.jpg,
-     3.jpg… Trang sẽ tự tìm thấy, không cần sửa gì ở đây.
-     Cách 2: liệt kê thẳng vào đây để kèm lời chú thích cho từng tấm:
-        anh: [
-          { src:'anh/1.jpg', chu:'Lần đầu anh với em đi chơi xa' },
-          { src:'anh/2.jpg', chu:'Cái Tết đầu tiên có em' },
-        ],                                                              */
-  anh: [
-    { src:'anh/1.jpg', chu:'' },
-    { src:'anh/2.jpg', chu:'' },
-    { src:'anh/3.jpg', chu:'' },
-    { src:'anh/4.jpg', chu:'' },
-  ],
+     Cứ bỏ ảnh vào thư mục "anh/" và đặt tên 1.jpg, 2.jpg, 3.jpg… là xong.
+     KHÔNG cần khai báo số lượng ở đây nữa: trang đọc danh sách thật trong
+     thư mục qua "anh/danhsach.json" (serve.js quét ngay lúc chạy máy nhà,
+     Vercel quét lúc deploy — xem quet-anh.js).
+
+     Muốn ghi chú riêng cho tấm nào thì điền vào "chuThich" theo tên file,
+     tấm nào không có thì dùng câu mặc định.                              */
+  chuThich: {
+    // '1.jpg': 'Lần đầu anh với em đi chơi xa',
+    // '2.jpg': 'Cái Tết đầu tiên có em',
+  },
+
+  // Chỉ dùng khi muốn tự tay chốt danh sách và thứ tự, bỏ qua thư mục:
+  //   anh: [ { src:'anh/dalat.jpg', chu:'Đà Lạt' }, … ]
+  anh: [],
+
   thuMucAnh:  'anh',
-  soAnhDoTim: 40,             // dò tối đa bao nhiêu file khi tự tìm
+  soAnhDoTim: 40,             // chỉ dùng cho cách dò số dự phòng
   giaySlide:  4.2,            // mỗi tấm hiện bao nhiêu giây
 };
 
@@ -1690,7 +1693,36 @@ const thuAnh = src => new Promise(res => {
   im.src = src;
 });
 
-// tự dò anh/1.jpg, anh/2.png… cho tới khi hụt 3 số liên tiếp
+// gắn lời chú thích theo tên file, ví dụ chuThich['1.jpg']
+const chuCuaAnh = src => CONFIG.chuThich[src.split('/').pop()] || '';
+
+/* Lấy danh sách ảnh THẬT trong thư mục.
+
+   Trình duyệt không tự đọc được nội dung thư mục — nó chỉ xin được từng file
+   cụ thể. Nên danh sách phải do phía phục vụ trang đưa ra: serve.js quét lại
+   mỗi lần trang hỏi, còn Vercel sinh sẵn file lúc deploy (quet-anh.js).
+   Thiếu file danh sách thì rơi xuống cách dò số thứ tự bên dưới, nên kiểu gì
+   album cũng có ảnh. */
+async function layDanhSachAnh(){
+  try {
+    const res = await fetch(`${CONFIG.thuMucAnh}/danhsach.json`, { cache:'no-store' });
+    if(res.ok){
+      const ten = await res.json();
+      if(Array.isArray(ten) && ten.length){
+        return ten.map(t => {
+          const src = `${CONFIG.thuMucAnh}/${t}`;
+          return { src, chu:chuCuaAnh(src) };
+        });
+      }
+    }
+  } catch(e){
+    // không có danh sách thì thôi, đã có cách dò số lo
+  }
+  return doTimAnh();
+}
+
+// Dự phòng: dò anh/1.jpg, anh/2.png… cho tới khi hụt 3 số liên tiếp.
+// Cách này tạo ra một mớ lỗi 404 nên chỉ dùng khi không có danh sách.
 async function doTimAnh(){
   const duoi = ['jpg','jpeg','png','webp','JPG','JPEG','PNG','WEBP'];
   const ra = [];
@@ -1699,7 +1731,7 @@ async function doTimAnh(){
     const thay = (await Promise.all(
       duoi.map(e => thuAnh(`${CONFIG.thuMucAnh}/${i}.${e}`))
     )).find(Boolean);
-    if(thay){ ra.push({ src:thay }); hut = 0; }
+    if(thay){ ra.push({ src:thay, chu:chuCuaAnh(thay) }); hut = 0; }
     else if(++hut >= 3) break;
   }
   return ra;
@@ -1736,7 +1768,7 @@ function datChay(on){
 }
 
 async function dungAlbum(){
-  anhs = CONFIG.anh.length ? CONFIG.anh.slice() : await doTimAnh();
+  anhs = CONFIG.anh.length ? CONFIG.anh.slice() : await layDanhSachAnh();
   if(!anhs.length) return;             // chưa có ảnh thì giữ nguyên tấm mặc định
 
   phEl.classList.add('off');

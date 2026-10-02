@@ -3,6 +3,7 @@
 const http = require('http');
 const fs   = require('fs');
 const path = require('path');
+const { quetAnh } = require('./quet-anh');
 
 const PORT = process.env.PORT || 5173;
 const ROOT = __dirname;
@@ -15,6 +16,16 @@ const TYPES = {
 
 http.createServer((req, res) => {
   const url = decodeURIComponent(req.url.split('?')[0]);
+
+  // Danh sách ảnh được quét lại ngay lúc trang hỏi, chứ không đọc file sẵn.
+  // Nhờ vậy bỏ thêm ảnh vào thư mục là tải lại trang thấy liền, không phải
+  // khởi động lại server. (Trên Vercel thì file này đã được sinh lúc deploy.)
+  if (url === '/anh/danhsach.json') {
+    res.writeHead(200, { 'Content-Type': TYPES['.json'], 'Cache-Control': 'no-store' });
+    res.end(JSON.stringify(quetAnh()));
+    return;
+  }
+
   const file = path.join(ROOT, url === '/' ? 'index.html' : url);
   if (!file.startsWith(ROOT)) { res.writeHead(403).end('Forbidden'); return; }
   fs.readFile(file, (err, data) => {
