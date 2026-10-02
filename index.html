@@ -7,9 +7,9 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Quà cho cậu" />
+<meta name="apple-mobile-web-app-title" content="Quà cho em" />
 <meta name="format-detection" content="telephone=no" />
-<title>Gửi Ani — 3 năm của mình 💝</title>
+<title>Gửi Ani — 3 năm của anh và em 💝</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400..700&family=Quicksand:wght@300..700&display=swap" rel="stylesheet">
@@ -105,8 +105,13 @@
   }
 
   /* ============ lớp giao diện ============ */
+  /* Safari iOS neo phần tử position:fixed theo viewport LỚN (lúc ẩn thanh công
+     cụ), nên "inset:0" đẩy mép dưới xuống dưới thanh địa chỉ — nút mở quà nằm
+     ở đáy sẽ bị thanh đó ăn mất cú chạm. Chốt chiều cao theo dvh để khung luôn
+     nằm gọn trong vùng nhìn thấy. */
   .screen{
-    position:fixed;inset:0;z-index:10;
+    position:fixed;left:0;right:0;top:0;z-index:10;
+    height:100%;height:100dvh;
     display:flex;flex-direction:column;align-items:center;justify-content:center;
     text-align:center;
     padding:calc(var(--sat) + 26px) calc(var(--sar) + 24px) calc(var(--sab) + 26px) calc(var(--sal) + 24px);
@@ -123,9 +128,21 @@
   }
   @keyframes shimmer{to{background-position:220% center}}
 
+  /* Hộp quà 3D phía sau phát sáng rất mạnh, chữ mảnh đặt lên dễ bị nuốt mất.
+     Trải một lớp tối mờ dần ngay sau khối chữ để luôn còn nền mà đọc. */
+  #intro::before{
+    content:'';position:absolute;left:0;right:0;bottom:0;height:72%;
+    background:linear-gradient(to top,
+      rgba(14,4,20,.88) 0%, rgba(14,4,20,.72) 34%,
+      rgba(14,4,20,.38) 62%, transparent 100%);
+    pointer-events:none;z-index:-1;
+  }
+  #intro > *{position:relative;}
+
   #intro .eyebrow{
-    font-size:.74rem;letter-spacing:.3em;text-transform:uppercase;
-    color:#ffc9de;opacity:.72;margin-bottom:6px;
+    font-size:.78rem;letter-spacing:.3em;text-transform:uppercase;
+    color:#ffe0ee;opacity:1;margin-bottom:6px;font-weight:600;
+    text-shadow:0 2px 10px rgba(10,2,16,.95), 0 0 24px rgba(10,2,16,.8);
   }
   .years{
     display:flex;align-items:baseline;justify-content:center;gap:10px;margin-bottom:4px;
@@ -135,24 +152,38 @@
     font-size:clamp(3.4rem,15vw,6rem);font-weight:700;line-height:1;
     background:linear-gradient(100deg,#fff6fa,#ffd98a 45%,#ff9ec4 80%);
     background-size:220% auto;-webkit-background-clip:text;background-clip:text;color:transparent;
-    filter:drop-shadow(0 0 26px rgba(255,160,205,.55));
+    /* chữ dùng background-clip nên không ăn text-shadow — viền tối phải đi qua filter */
+    filter:drop-shadow(0 3px 10px rgba(10,2,16,.95))
+           drop-shadow(0 0 26px rgba(255,160,205,.55));
     animation:shimmer 5s linear infinite;
   }
-  .years .unit{font-size:clamp(1.3rem,5vw,2rem);color:#ffd3e6;opacity:.9;}
+  .years .unit{
+    font-size:clamp(1.3rem,5vw,2rem);color:#ffdcec;opacity:1;
+    text-shadow:0 2px 12px rgba(10,2,16,.95);
+  }
   #intro .countdown{
-    font-family:'Dancing Script',cursive;font-size:1.1rem;color:#ffd98a;
-    opacity:.9;margin:-2px 0 10px;filter:drop-shadow(0 0 12px rgba(255,200,120,.45));
+    font-family:'Dancing Script',cursive;font-size:1.25rem;color:#ffe3a8;
+    opacity:1;margin:-2px 0 10px;font-weight:600;
+    text-shadow:0 2px 12px rgba(10,2,16,.95), 0 0 20px rgba(10,2,16,.75);
   }
   #intro .countdown:empty{display:none;}
-  #intro h1{font-size:clamp(2.1rem,7.6vw,4.2rem);line-height:1.1;font-weight:700;}
-  #intro .sub{
-    margin-top:14px;font-size:clamp(.92rem,3.4vw,1.15rem);font-weight:400;
-    color:#ffdcea;letter-spacing:.11em;text-transform:uppercase;opacity:.85;
+  #intro h1{
+    font-size:clamp(2.1rem,7.6vw,4.2rem);line-height:1.1;font-weight:700;
+    filter:drop-shadow(0 3px 10px rgba(10,2,16,.9));
   }
-  #intro .hint{margin-top:10px;font-size:.9rem;color:#ffc9de;opacity:.6;font-style:italic;}
+  #intro .sub{
+    margin-top:14px;font-size:clamp(.92rem,3.4vw,1.15rem);font-weight:500;
+    color:#ffe6f1;letter-spacing:.11em;text-transform:uppercase;opacity:1;
+    text-shadow:0 2px 10px rgba(10,2,16,.95);
+  }
+  #intro .hint{
+    margin-top:10px;font-size:.9rem;color:#ffd4e6;opacity:.85;font-style:italic;
+    text-shadow:0 2px 8px rgba(10,2,16,.9);
+  }
 
   .btn{
-    position:relative;margin-top:34px;padding:16px 44px;border:none;cursor:pointer;
+    position:relative;z-index:2;touch-action:manipulation;
+    margin-top:34px;padding:16px 44px;border:none;cursor:pointer;
     font-family:'Quicksand',sans-serif;font-size:1.05rem;font-weight:700;letter-spacing:.06em;
     color:#4a0f28;border-radius:999px;
     background:linear-gradient(135deg,#ffe9b0,#ffb3d1 48%,#ffd79a);
@@ -190,7 +221,9 @@
 
   /* ============ ảnh polaroid ============ */
   #polaroidWrap{
-    position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;
+    position:fixed;left:0;right:0;top:0;z-index:30;
+    height:100%;height:100dvh;
+    display:flex;align-items:center;justify-content:center;
     background:rgba(14,4,20,.72);
     -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
     opacity:0;pointer-events:none;transition:opacity .7s ease;
@@ -337,7 +370,9 @@
   /* ===== Điện thoại dọc (iPhone 14 Pro Max: 430 × 932) ===== */
   @media (max-width:560px) and (orientation:portrait){
     /* màn mở đầu dồn xuống dưới để hộp quà 3D nổi ở nửa trên */
-    #intro{justify-content:flex-end;padding-bottom:calc(var(--sab) + 8vh);}
+    /* chừa đáy vừa đủ để hộp quà 3D nổi ở nửa trên, nhưng nút vẫn cách mép
+       dưới một khoảng chạm thoải mái — dùng dvh cho khớp vùng nhìn thấy */
+    #intro{justify-content:flex-end;padding-bottom:calc(var(--sab) + 6dvh + 16px);}
     #intro h1{font-size:clamp(2.5rem,12vw,3.6rem);}
     #intro .sub{font-size:.82rem;letter-spacing:.16em;margin-top:12px;}
     #intro .hint{font-size:.8rem;margin-top:8px;}
@@ -403,6 +438,18 @@
     max-height:34vh;overflow:auto;word-break:break-word;
   }
   #loi.show{display:block;}
+  /* ============ nhắc nhẹ (gạt chuông, mẹo nhỏ…) ============ */
+  #toast{
+    position:fixed;z-index:68;left:50%;transform:translate(-50%,16px);
+    bottom:calc(var(--sab) + 84px);
+    max-width:min(340px,86vw);padding:11px 16px;border-radius:999px;
+    background:rgba(60,12,36,.88);border:1px solid rgba(255,190,220,.35);
+    -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+    font-size:.8rem;line-height:1.45;color:#ffe2ef;text-align:center;
+    opacity:0;pointer-events:none;transition:opacity .5s ease, transform .5s ease;
+  }
+  #toast.show{opacity:1;transform:translate(-50%,0);}
+
   #loiX{
     position:absolute;right:6px;top:6px;width:28px;height:28px;border-radius:50%;
     border:none;background:rgba(255,255,255,.12);color:#ffd9e8;font-size:14px;cursor:pointer;
@@ -424,12 +471,12 @@
 
 <!-- Màn hình mở đầu -->
 <section class="screen" id="intro">
-  <p class="eyebrow"><span class="js-ten">Ani</span> ơi, mình đã đi cùng nhau</p>
+  <p class="eyebrow"><span class="js-ten">Ani</span> ơi, anh với em đã đi cùng nhau</p>
   <div class="years"><span id="yearNum">3</span><span class="unit">năm</span></div>
   <p class="countdown" id="countdown"></p>
-  <h1 class="script">Có một món quà<br/>đang đợi cậu…</h1>
+  <h1 class="script">Có một món quà<br/>đang đợi em…</h1>
   <p class="sub"><span id="dayCount">1095</span> ngày &nbsp;•&nbsp; gói bằng rất nhiều thương nhớ</p>
-  <p class="hint">(tớ gói hơi xấu, nhưng bên trong thì đẹp lắm)</p>
+  <p class="hint">(anh gói hơi xấu, nhưng bên trong thì đẹp lắm)</p>
   <button class="btn" id="openBtn">Mở quà ra xem 🎀</button>
 </section>
 
@@ -437,10 +484,10 @@
 <section class="screen hidden" id="reveal">
   <div class="inner">
     <div id="lines">
-      <p class="line tiny" data-i="0">gửi <span class="js-ten">Ani</span> — kỷ niệm <span class="js-nam">3</span> năm mình bên nhau · <span class="js-ngay">03/10</span></p>
+      <p class="line tiny" data-i="0">gửi <span class="js-ten">Ani</span> — kỷ niệm <span class="js-nam">3</span> năm anh và em bên nhau · <span class="js-ngay">03/10</span></p>
       <h2 class="line big script" data-i="1">Một chiếc máy ảnh nhỏ 📸</h2>
-      <p class="line small" data-i="2">Ba năm rồi đó <span class="js-ten">Ani</span>. Tớ sợ thời gian sẽ cuốn đi mất<br/>những ngày có cậu, nên tớ tặng cậu thứ giữ lại được tất cả.</p>
-      <p class="line small" data-i="3">Từ nay mỗi nụ cười của cậu đều có một chỗ để ở lại.<br/>Và cho tớ xin thêm thật nhiều năm nữa trong khung hình nhé? 💗</p>
+      <p class="line small" data-i="2">Ba năm rồi đó <span class="js-ten">Ani</span>. Anh sợ thời gian sẽ cuốn đi mất<br/>những ngày có em, nên anh tặng em thứ giữ lại được tất cả.</p>
+      <p class="line small" data-i="3">Từ nay mỗi nụ cười của em đều có một chỗ để ở lại.<br/>Và cho anh xin thêm thật nhiều năm nữa trong khung hình nhé? 💗</p>
     </div>
     <div class="row">
       <button class="btn" id="snapBtn">Mở album kỷ niệm 📷</button>
@@ -457,7 +504,7 @@
         <div id="slides"></div>
         <div id="photoPh">
           <div class="em">💘</div>
-          <div class="cap"><span class="js-ten">Ani</span> &amp; tớ</div>
+          <div class="cap"><span class="js-ten">Ani</span> &amp; anh</div>
         </div>
         <div class="stamp"><span class="js-nam">3</span> NĂM</div>
         <button class="edge prev off" id="prevBtn" aria-label="Ảnh trước">‹</button>
@@ -479,6 +526,7 @@
 <div id="flash"></div>
 
 <div id="loi"><button id="loiX" type="button" aria-label="Đóng">✕</button><span id="loiText"></span></div>
+<div id="toast"></div>
 
 <div id="loader">
   <div class="ring"></div>
@@ -516,8 +564,8 @@ const CONFIG = {
      3.jpg… Trang sẽ tự tìm thấy, không cần sửa gì ở đây.
      Cách 2: liệt kê thẳng vào đây để kèm lời chú thích cho từng tấm:
         anh: [
-          { src:'anh/1.jpg', chu:'Lần đầu mình đi chơi xa' },
-          { src:'anh/2.jpg', chu:'Cái Tết đầu tiên có cậu' },
+          { src:'anh/1.jpg', chu:'Lần đầu anh với em đi chơi xa' },
+          { src:'anh/2.jpg', chu:'Cái Tết đầu tiên có em' },
         ],                                                              */
   anh: [
     { src:'anh/1.jpg', chu:'' },
@@ -569,6 +617,16 @@ const KY_NIEM = (() => {
    thì hiện luôn ra đây để còn biết đường sửa.
    ======================================================= */
 let soLoi = 0;
+let toastTimer = null;
+function hienToast(chu, giay = 6){
+  const el = document.getElementById('toast');
+  if(!el) return;
+  el.textContent = chu;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), giay * 1000);
+}
+
 function baoLoi(err){
   console.error(err);
   if(soLoi++ > 4) return;
@@ -1264,22 +1322,24 @@ function scheduler(){
 const bgm = new Audio('nhac.mp3');
 bgm.loop = true; bgm.preload = 'auto'; bgm.volume = 0;
 let hasAudioFile = false;
+let nguoiDungTatNhac = false;   // người xem đã tự tay tắt nhạc hay chưa
+
+// iOS không cho mã lệnh chỉnh âm lượng (volume chỉ đọc, chỉnh bằng phím cứng).
+// Thử một lần để biết có fade được không, nếu không thì phát thẳng.
+const fadeDuocAmLuong = (() => {
+  try { const a = new Audio(); a.volume = 0.5; return Math.abs(a.volume - 0.5) < 0.01; }
+  catch(e){ return false; }
+})();
 
 function stopSynth(){
   if(!actx) return;
   masterGain.gain.cancelScheduledValues(actx.currentTime);
   masterGain.gain.linearRampToValueAtTime(0.0001, actx.currentTime + 0.6);
 }
-function playFile(){
-  bgm.play().then(() => fadeAudio(bgm, 0.85, 1400)).catch(() => {});
-}
 
-// File có thể tải xong sau khi người ta đã bấm mở quà → lúc đó đổi sang file luôn.
-bgm.addEventListener('canplaythrough', () => {
-  hasAudioFile = true;
-  if(musicOn && bgm.paused){ stopSynth(); playFile(); }
-}, { once:true });
-bgm.addEventListener('error', () => { hasAudioFile = false; }, { once:true });
+// Không cần chờ file tải xong mới phát. iOS chỉ cho phép phát nhạc khi play()
+// được gọi NGAY trong thao tác chạm của người dùng — gọi muộn hơn là bị chặn.
+// Nên ta luôn gọi play() ngay lúc chạm; trình duyệt sẽ tự phát khi tải đủ.
 
 function fadeAudio(el, to, ms){
   const from = el.volume, t0 = performance.now();
@@ -1292,34 +1352,70 @@ function fadeAudio(el, to, ms){
 }
 
 const musicBtn = document.getElementById('music');
-function toggleMusic(force){
-  if(hasAudioFile){
-    musicOn = force !== undefined ? force : !musicOn;
-    musicBtn.classList.toggle('on', musicOn);
-    musicBtn.textContent = musicOn ? '♫' : '♪';
-    if(musicOn) playFile();
-    else fadeAudio(bgm, 0, 500);
-    return;
-  }
-  if(!actx) initAudio();
-  if(actx.state === 'suspended') actx.resume();
-  musicOn = force !== undefined ? force : !musicOn;
+
+function veNutNhac(){
   musicBtn.classList.toggle('on', musicOn);
   musicBtn.textContent = musicOn ? '♫' : '♪';
-  if(musicOn){
-    masterGain.gain.cancelScheduledValues(actx.currentTime);
-    masterGain.gain.linearRampToValueAtTime(0.55, actx.currentTime + 1.2);
-    if(!schedTimer){ nextNoteTime = actx.currentTime + 0.1; schedTimer = setInterval(scheduler, 90); }
-  } else {
-    stopSynth();
-  }
 }
-musicBtn.addEventListener('click', () => {
+
+// Hộp nhạc tự sinh — chỉ dùng khi không có file nhac.mp3
+function batSynth(){
+  if(!actx) initAudio();
+  if(actx.state === 'suspended') actx.resume();
+  masterGain.gain.cancelScheduledValues(actx.currentTime);
+  masterGain.gain.linearRampToValueAtTime(0.55, actx.currentTime + 1.2);
+  if(!schedTimer){ nextNoteTime = actx.currentTime + 0.1; schedTimer = setInterval(scheduler, 90); }
+}
+
+function toggleMusic(force){
+  musicOn = force !== undefined ? force : !musicOn;
   musicBtn.classList.remove('hint');
+  veNutNhac();
+
+  if(!musicOn){
+    if(fadeDuocAmLuong) fadeAudio(bgm, 0, 500); else bgm.pause();
+    stopSynth();
+    return;
+  }
+
+  // Dựng sẵn AudioContext NGAY ở đây, lúc còn trong thao tác chạm. Nếu lát nữa
+  // phải quay về hộp nhạc tự sinh thì nó đã được "mở khoá", chứ gọi muộn hơn
+  // trong .catch() là đã ra ngoài thao tác chạm và iOS sẽ chặn.
+  try {
+    if(!actx) initAudio();
+    if(actx.state === 'suspended') actx.resume();
+  } catch(e){ /* không sao, vẫn còn đường phát file */ }
+
+  // Thử file nhạc trước. Phải gọi play() ngay tại đây — tức là vẫn còn trong
+  // thao tác chạm — thì iOS mới cho phép. Nếu không có file hoặc bị chặn thì
+  // lời hứa bị từ chối, lúc đó mới quay về hộp nhạc tự sinh.
+  if(bgm.paused && fadeDuocAmLuong) bgm.volume = 0;
+  bgm.play().then(() => {
+    hasAudioFile = true;
+    stopSynth();
+    if(fadeDuocAmLuong) fadeAudio(bgm, 0.85, 1400);
+    goiYChuong();
+  }).catch(() => {
+    hasAudioFile = false;
+    if(musicOn){ batSynth(); goiYChuong(); }
+  });
+}
+
+// Trên iPhone, gạt chuông sang chế độ im lặng là mọi âm thanh trong trình duyệt
+// đều tắt — không có cách nào phát hiện bằng mã. Nhắc nhẹ một lần cho đỡ hoang mang.
+let daGoiYChuong = false;
+function goiYChuong(){
+  if(daGoiYChuong || !MOBILE) return;
+  daGoiYChuong = true;
+  hienToast('Không nghe thấy nhạc? Thử gạt nút chuông bên hông máy 🔔');
+}
+
+musicBtn.addEventListener('click', () => {
   // lỗi âm thanh không được phép làm hỏng phần còn lại của trang
   try { toggleMusic(); } catch(err){ baoLoi(err); }
+  // nhớ lựa chọn: đã tự tay tắt thì lần mở quà sau đừng bật lại
+  nguoiDungTatNhac = !musicOn;
 });
-musicBtn.classList.add('hint');   // nhấp nháy mời bấm cho tới khi được dùng lần đầu
 
 function shutterSound(){
   if(!actx) initAudio();
@@ -1449,6 +1545,13 @@ function openGift(){
   // Hoạt cảnh chạy TRƯỚC — không để bất cứ thứ gì chen vào làm hỏng việc mở quà.
   buildTimeline();
   startTimeline();
+
+  // Nhạc nổi lên cùng lúc hộp quà bật ra. Hàm này vẫn đang nằm trong cú chạm
+  // vào nút mở quà, nên trình duyệt cho phép phát. Bọc riêng để dù âm thanh
+  // có trục trặc thì quà vẫn mở bình thường.
+  if(!nguoiDungTatNhac){
+    try { toggleMusic(true); } catch(err){ baoLoi(err); }
+  }
 
   // Lưới an toàn: nếu sau 7 giây mà quà vẫn chưa mở (máy yếu, WebGL lỗi…)
   // thì bật hộp ra ngay và hiện lời nhắn, để không bao giờ bị kẹt.
